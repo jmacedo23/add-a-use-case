@@ -1476,6 +1476,9 @@ Details:
 - **3a. The student is already deactivated:**
   - 3a1. The system informs the course admin or instructor that the student is already deactivated and makes no changes.
   - 3a2. Use case ends.
+- **3b. The actor is not authorized to deactivate the student:**
+  - 3b1. The system denies the deactivation, makes no changes, and informs the actor that only the course admin who owns the course or an instructor assigned to the student's course section may deactivate the student (BR-student-lifecycle, BR-section-scoped-access, FR-SEC-deny-unauthorized).
+  - 3b2. Use case ends.
 **Priority:** Low
 **Frequency of Use:** Rare. Occurs occasionally when a student withdraws from a course section.
 **Business Rules:** BR-student-lifecycle
