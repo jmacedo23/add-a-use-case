@@ -2243,7 +2243,7 @@ Details:
 - Every active team member MUST be evaluated. A deactivated student is excluded from future peer-evaluation targets.
 - Scores MUST be integers.
 
-Example (each team member, self included, is evaluated on every rubric criterion):
+Example (each active team member, self included, is evaluated on every rubric criterion):
 
 | student | Quality of work — How do you rate the quality of this teammate's work? (1-10) | … | Public comments | Private comments |
 | ---- | ---- | ---- | ---- | ---- |
