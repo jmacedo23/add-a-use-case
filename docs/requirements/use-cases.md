@@ -1485,6 +1485,7 @@ Details:
 
 **Associated Information:**
 - Consequence of the deactivation: The student will no longer be able to log in or submit weekly activity reports and peer evaluations. Her current team membership is removed, but the student's account and her previously submitted work are kept in the system. Historical peer evaluations remain available to authorized instructors; the student is excluded from future peer-evaluation targets and obligations. Deactivation will NOT remove the student from the system, and the account can be reactivated in the future (UC-STU-reactivate-student: Reactivate a student); reactivation restores access only and does not restore the former team membership. This is distinct from deletion (UC-STU-delete-student: Delete a student), which is a physical, unrecoverable delete.
+- Cancellation: If the course admin or instructor cancels the confirmation before submitting, the system makes no change to the student's account or team membership.
 
 **Related Use Cases:** UC-STU-delete-student: Delete a student; UC-STU-reactivate-student: Reactivate a student
 **Assumptions:**
