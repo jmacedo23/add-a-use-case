@@ -1523,7 +1523,7 @@ Details:
 **Business Rules:** BR-student-lifecycle
 
 **Associated Information:**
-- Reactivation restores account access only. Because deactivation removes the student's former team membership, reactivation does not restore that membership; the course admin may assign the student to a team through UC-TEA-assign-students: Assign students to teams.
+- Reactivation restores account access only. Because deactivation removes the student's former team membership, reactivation does not restore that membership; the course admin may assign the student to a team through UC-TEA-assign-students: Assign students to teams. While unassigned, the reactivated student may view the peer evaluations her former teammates wrote of her while she was on the team (BR-team-assignment-required).
 
 **Related Use Cases:** UC-STU-delete-student: Delete a student; UC-STU-deactivate-student: Deactivate a student
 **Assumptions:**
