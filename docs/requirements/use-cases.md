@@ -1478,7 +1478,7 @@ Details:
 **Business Rules:** BR-student-lifecycle
 
 **Associated Information:**
-- Consequence of the deactivation: The student will no longer be able to log in or submit weekly activity reports and peer evaluations, but the student's account and her previously submitted work are kept in the system. Deactivation will NOT remove the student from the system, and the account can be reactivated in the future (UC-STU-reactivate-student: Reactivate a student). This is distinct from deletion (UC-STU-delete-student: Delete a student), which is a physical, unrecoverable delete. The course admin or instructor shall be able to cancel the use case at any time prior to submitting it.
+- Consequence of the deactivation: The student will no longer be able to log in or submit weekly activity reports and peer evaluations. Her current team membership is removed, but the student's account and her previously submitted work are kept in the system. Deactivation will NOT remove the student from the system, and the account can be reactivated in the future (UC-STU-reactivate-student: Reactivate a student); reactivation restores access only and does not restore the former team membership. This is distinct from deletion (UC-STU-delete-student: Delete a student), which is a physical, unrecoverable delete.
 
 **Related Use Cases:** UC-STU-delete-student: Delete a student; UC-STU-reactivate-student: Reactivate a student
 **Assumptions:**
@@ -1516,7 +1516,7 @@ Details:
 **Business Rules:** BR-student-lifecycle
 
 **Associated Information:**
-- The course admin or instructor shall be able to cancel the use case at any time prior to submitting it.
+- Reactivation restores account access only. Because deactivation removes the student's former team membership, reactivation does not restore that membership; the course admin may assign the student to a team through UC-TEA-assign-students: Assign students to teams.
 
 **Related Use Cases:** UC-STU-delete-student: Delete a student; UC-STU-deactivate-student: Deactivate a student
 **Assumptions:**
