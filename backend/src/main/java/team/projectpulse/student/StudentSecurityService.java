@@ -47,4 +47,23 @@ public class StudentSecurityService {
                 .anyMatch(instructor -> instructor.getId().equals(instructorIdFromJwt));
     }
 
+    /**
+     * A course admin may manage every section in her course; an instructor may manage only students in sections to
+     * which she is assigned. Missing students and incomplete associations are denied without revealing their state.
+     */
+    public boolean canDeactivateStudent(Integer studentId) {
+        Student student = this.studentRepository.findById(studentId).orElse(null);
+        if (student == null || student.getSection() == null || student.getSection().getCourse() == null) {
+            return false;
+        }
+
+        Integer actorId = this.userUtils.getUserId();
+        if (student.getSection().getCourse().getCourseAdmin() != null
+                && actorId.equals(student.getSection().getCourse().getCourseAdmin().getId())) {
+            return true;
+        }
+        return student.getSection().getInstructors().stream()
+                .anyMatch(instructor -> actorId.equals(instructor.getId()));
+    }
+
 }

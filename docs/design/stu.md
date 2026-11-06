@@ -93,7 +93,8 @@ sequenceDiagram
     Guard->>Repository: fail-closed relationship check
     Security->>Controller: authorized request
     Controller->>Service: deactivateStudent(studentId)
-    Service->>Repository: actor-scoped active-student lookup
+    Service->>Repository: actor-scoped student lookup
+    Service->>Service: verify account is enabled
     Service->>Team: removeStudent(student)
     Service->>Service: set enabled false
     Service->>Repository: save in transaction
@@ -115,7 +116,7 @@ The confirmation's Cancel path makes no API call and leaves the student and curr
 - **Current team membership is removed with the account deactivation.** `StudentService` calls the existing `Team.removeStudent(student)` before disabling the account, keeping both JPA sides consistent. Directly nulling `Student.team` was rejected because it leaves `Team.students` inconsistent in the transaction.
 - **Historical records remain independent of current membership.** The operation changes only `Student.enabled` and the nullable current-team foreign key. Existing `Activity` rows retain their student and historical team references; existing `PeerEvaluation` rows retain evaluator and evaluatee references. Archive/copy tables were rejected because the existing independent references preserve the required history without duplicating records or changing retrieval.
 - **Deactivation is a dedicated command.** The generic update endpoint continues profile editing and does not control lifecycle state. Reusing its `enabled` field was rejected because it bypasses required confirmation, team removal, and lifecycle-specific authorization.
-- **Authorization is course/section scoped at both enforcement points.** The new route guard admits only the course owner or a course-section instructor and fails closed. The service then resolves the student through an actor-scoped repository query using `UserUtils.getUserId()`. A `ROLE_instructor` check alone, and an unscoped `findById`, were rejected because either permits a cross-course-section mutation.
+- **Authorization is course/section scoped at both enforcement points.** The new route guard admits only the course owner or a course-section instructor and fails closed. The service then resolves the student through an actor-scoped repository query using `UserUtils.getUserId()` and separately verifies that the account is enabled, so an in-scope deactivated student produces the required `409`. A `ROLE_instructor` check alone, and an unscoped `findById`, were rejected because either permits a cross-course-section mutation.
 - **An already-deactivated student is not treated as successful.** The service throws a dedicated exception mapped to `409 CONFLICT`, making extension 3a visible to the actor. A silent idempotent success was rejected because it would not inform the actor as the use case requires.
 
 ## Data model
