@@ -46,6 +46,7 @@
             circle
             plain
             type="primary"
+            :data-cy="`edit-student-${row.id}`"
             @click.stop="showEditStudentDialog(row)"
           ></el-button>
         </template>

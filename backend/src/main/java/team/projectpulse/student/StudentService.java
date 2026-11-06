@@ -4,13 +4,12 @@ import team.projectpulse.section.Section;
 import team.projectpulse.section.SectionRepository;
 import team.projectpulse.system.UserUtils;
 import team.projectpulse.system.exception.ObjectNotFoundException;
+import team.projectpulse.system.exception.StudentAlreadyDeactivatedException;
 import team.projectpulse.user.userinvitation.UserInvitationService;
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -114,15 +113,24 @@ public class StudentService {
         oldStudent.setLastName(update.getLastName());
         oldStudent.setEmail(update.getEmail());
 
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        // If the user is an admin, then the user can update all the fields
-        if (authentication.getAuthorities().stream().anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals("ROLE_instructor"))) {
-            oldStudent.setEnabled(update.isEnabled());
-//            oldStudent.setRoles(update.getRoles());
-        }
-
         return this.studentRepository.save(oldStudent);
+    }
+
+    /** Deactivates a student while retaining her historical work and clearing only current team membership. */
+    public Student deactivateStudent(Integer studentId) {
+        Integer actorId = this.userUtils.getUserId();
+        Student student = this.studentRepository.findDeactivatableById(studentId, actorId)
+                // Do not disclose whether a student outside the actor's scope exists.
+                .orElseThrow(() -> new ObjectNotFoundException("student", studentId));
+
+        if (!student.isEnabled()) {
+            throw new StudentAlreadyDeactivatedException(studentId);
+        }
+        if (student.getTeam() != null) {
+            student.getTeam().removeStudent(student);
+        }
+        student.setEnabled(false);
+        return this.studentRepository.save(student);
     }
 
     public void deleteStudent(Integer studentId) {
