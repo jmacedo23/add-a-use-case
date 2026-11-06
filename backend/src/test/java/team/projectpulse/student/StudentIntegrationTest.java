@@ -2,6 +2,8 @@ package team.projectpulse.student;
 
 import tools.jackson.databind.json.JsonMapper;
 import jakarta.persistence.EntityManager;
+import team.projectpulse.activity.Activity;
+import team.projectpulse.evaluation.PeerEvaluation;
 import team.projectpulse.AbstractIntegrationTest;
 import team.projectpulse.instructor.Instructor;
 import team.projectpulse.instructor.InstructorRepository;
@@ -24,6 +26,7 @@ import org.springframework.util.MultiValueMap;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -333,10 +336,24 @@ class StudentIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void testDeactivationPreservesHistoricalActivitiesAndPeerEvaluations() throws Exception {
+        // Capture the immutable historical links before changing the student's current membership.
+        Activity activityBefore = this.entityManager.find(Activity.class, 1);
+        Integer activityStudentId = activityBefore.getStudent().getId();
+        Integer activityTeamId = activityBefore.getTeam().getTeamId();
+        Map<Integer, String> peerReferencesBefore = peerReferencesForStudent(4);
+
         this.mockMvc.perform(post(this.baseUrl + "/students/4/deactivation")
                         .accept(MediaType.APPLICATION_JSON)
                         .header(HttpHeaders.AUTHORIZATION, this.adminToken))
                 .andExpect(jsonPath("$.code").value(StatusCode.SUCCESS));
+
+        this.entityManager.flush();
+        this.entityManager.clear();
+
+        Activity activityAfter = this.entityManager.find(Activity.class, 1);
+        assertThat(activityAfter.getStudent().getId()).isEqualTo(activityStudentId);
+        assertThat(activityAfter.getTeam().getTeamId()).isEqualTo(activityTeamId);
+        assertThat(peerReferencesForStudent(4)).isEqualTo(peerReferencesBefore);
 
         // Activity 1 is John's previously submitted work; it remains readable to the course admin after removal from Team1.
         this.mockMvc.perform(get(this.baseUrl + "/activities/1")
@@ -352,6 +369,35 @@ class StudentIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.flag").value(true))
                 .andExpect(jsonPath("$.code").value(StatusCode.SUCCESS))
                 .andExpect(jsonPath("$.data", Matchers.hasSize(3)));
+    }
+
+    @Test
+    void testDeactivationRemovesStudentFromFuturePeerEvaluationTargetsAndObligations() throws Exception {
+        this.mockMvc.perform(post(this.baseUrl + "/students/4/deactivation")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .header(HttpHeaders.AUTHORIZATION, this.instructorBillToken))
+                .andExpect(jsonPath("$.code").value(StatusCode.SUCCESS));
+
+        // Eric's future peer-evaluation targets are the current members of Team1 only.
+        this.mockMvc.perform(get(this.baseUrl + "/students/teams/1")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .header(HttpHeaders.AUTHORIZATION, this.studentEricToken))
+                .andExpect(jsonPath("$.flag").value(true))
+                .andExpect(jsonPath("$.data", Matchers.hasSize(2)))
+                .andExpect(jsonPath("$.data[*].id", Matchers.containsInAnyOrder(5, 6)));
+
+        // Remove John's future submissions. His absence from both reports must therefore come from lifecycle
+        // eligibility, not from work he happened to submit before deactivation.
+        this.entityManager.createQuery("delete from Activity activity where activity.student.id = 4 and activity.week = '2023-W33'")
+                .executeUpdate();
+        this.entityManager.createQuery("delete from Rating rating where rating.peerEvaluation.evaluator.id = 4 and rating.peerEvaluation.week = '2023-W33'")
+                .executeUpdate();
+        this.entityManager.createQuery("delete from PeerEvaluation evaluation where evaluation.evaluator.id = 4 and evaluation.week = '2023-W33'")
+                .executeUpdate();
+        this.entityManager.clear();
+
+        assertDeactivatedStudentDoesNotOwe("PEER_EVALUATION");
+        assertDeactivatedStudentDoesNotOwe("WEEKLY_ACTIVITY_REPORT");
     }
 
     @Test
@@ -421,6 +467,27 @@ class StudentIntegrationTest extends AbstractIntegrationTest {
                 .andReturn();
         JSONObject json = new JSONObject(result.getResponse().getContentAsString());
         return "Bearer " + json.getJSONObject("data").getString("token");
+    }
+
+    private Map<Integer, String> peerReferencesForStudent(Integer studentId) {
+        return this.entityManager.createQuery("""
+                        select evaluation from PeerEvaluation evaluation
+                        where evaluation.evaluator.id = :studentId or evaluation.evaluatee.id = :studentId
+                        """, PeerEvaluation.class)
+                .setParameter("studentId", studentId)
+                .getResultList().stream()
+                .collect(Collectors.toMap(PeerEvaluation::getPeerEvaluationId,
+                        evaluation -> evaluation.getEvaluator().getId() + ":" + evaluation.getEvaluatee().getId()));
+    }
+
+    private void assertDeactivatedStudentDoesNotOwe(String item) throws Exception {
+        this.mockMvc.perform(get(this.baseUrl + "/sections/2/submission-status")
+                        .param("item", item)
+                        .param("week", "2023-W33")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .header(HttpHeaders.AUTHORIZATION, this.instructorBillToken))
+                .andExpect(jsonPath("$.flag").value(true))
+                .andExpect(jsonPath("$.data.teams[*].students[*].id", Matchers.not(Matchers.hasItem(4))));
     }
 
 //    @Test
